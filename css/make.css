@@ -1,0 +1,734 @@
+/* re:poem — module 04: 让碎片成为诗
+   材质参考了一件刺绣小工具：粉麻布做底，诗写在一块白棉布补丁上，
+   四周一圈蓝色绣线，边角散着毛边，一根针带着线从布上穿过去。
+   控制栏就是参考里那排小工具，只是每一件都真的能用。               */
+
+body.is-make {
+  height: auto;
+  min-height: 100vh;    /* 老浏览器兜底 */
+  min-height: 100dvh;
+  color: var(--wine);
+  padding-bottom: 150px;
+
+  /* 底图：用户给的花卉拼贴。压在内容下面，上面盖一层米白纸色把它压柔 ——
+     布面卡片是浅色的，背景太跳会和布抢。
+     注意：不写 background-attachment: fixed —— iOS Safari 不支持，
+     改用固定定位的伪元素，所有浏览器表现一致。 */
+  background-color: #e9dfd9;
+}
+
+body.is-make::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg,
+      rgba(245, 238, 232, 0.46) 0%,
+      rgba(245, 238, 232, 0.30) 34%,
+      rgba(242, 233, 228, 0.40) 72%,
+      rgba(238, 228, 224, 0.52) 100%),
+    url("../assets/img/make-bg.jpg") center center / cover no-repeat;
+  pointer-events: none;
+}
+
+.make {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: clamp(24px, 4vh, 48px) clamp(18px, 4vw, 44px) 0;
+}
+
+/* ---------------------------------------------------------------- head */
+
+/* 底图有花纹，小字得压深一档才稳（实测 10.5px 在暗部只有 4.0，不够） */
+.make__eyebrow {
+  font-family: var(--serif);
+  font-size: 10.5px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: #33101F;
+}
+
+.make__back {
+  margin-left: 6px;
+  color: #6B3B4A;
+  text-decoration: none;
+  letter-spacing: 0.06em;
+  border-bottom: 1px dotted rgba(76, 27, 47, 0.4);
+}
+
+.make__back:hover { color: var(--wine); border-bottom-color: var(--wine); }
+
+.make__title {
+  margin-top: 10px;
+  font-family: var(--brush);
+  font-size: clamp(26px, 3.4vw, 42px);
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  color: var(--wine);
+}
+
+/* -------------------------------------------------------------- stage */
+
+.make__stage {
+  margin-top: clamp(20px, 3.4vh, 38px);
+}
+
+/* --------------------------------------------------------------- cloth */
+
+.cloth {
+  position: relative;
+  isolation: isolate;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: clamp(34px, 4.6vw, 58px) clamp(30px, 4.4vw, 64px) clamp(30px, 4vw, 50px);
+}
+
+/* 布面在伪元素上，只有它过毛边滤镜，字永远清晰 */
+.cloth::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    repeating-linear-gradient(90deg, rgba(120, 90, 80, 0.06) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(120, 90, 80, 0.05) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.35) 0 1px, transparent 1px 9px),
+    /* 斜着的一道浅褶，布不是平的 */
+    linear-gradient(107deg, rgba(255, 255, 255, 0) 34%, rgba(190, 160, 150, 0.09) 50%, rgba(255, 255, 255, 0) 66%),
+    radial-gradient(140% 120% at 30% 0%, #fffdf8, #f7ece0 70%, #f2e3d5);
+  /* 影子跟布同一个滤镜，所以影子的边也是毛的 */
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.55),
+    0 22px 34px -24px rgba(90, 40, 55, 0.6),
+    0 4px 10px -6px rgba(90, 40, 55, 0.25);
+  filter: url(#clothEdge);
+}
+
+/* 一圈绣线：SVG 画的，遮罩一拉就"缝"过去 */
+.stitch {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.sew-needle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 11px;
+  height: 38px;
+  opacity: 0;
+  pointer-events: none;
+  offset-path: var(--sew-path, path("M 18 18 H 300 V 300 H 18 Z"));
+  offset-rotate: auto;
+  offset-distance: 0%;
+}
+
+/* ---------------- 缝的动作 ---------------- */
+
+@keyframes sew-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes sew-ride {
+  from { offset-distance: 0%; }
+  to   { offset-distance: 100%; }
+}
+
+@keyframes needle-fade {
+  0%   { opacity: 0; }
+  6%   { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* 一针一针地出现：用 steps() 把一次擦除切成十几针 */
+@keyframes sew-in {
+  from { clip-path: inset(-0.3em 100% -0.3em 0); }
+  to   { clip-path: inset(-0.3em 0 -0.3em 0); }
+}
+
+.cloth.is-sewing .stitch rect[pathLength] {
+  animation: sew-draw 1500ms linear 100ms forwards;
+}
+
+.cloth.is-sewing .sew-needle {
+  animation:
+    sew-ride 1500ms linear 100ms forwards,
+    needle-fade 1500ms linear 100ms forwards;
+}
+
+.line {
+  display: block;
+  white-space: pre-wrap;
+}
+
+.cloth.is-sewing .sheet__title {
+  animation: sew-in 700ms steps(12, end) 320ms both;
+}
+
+.cloth.is-sewing .line {
+  animation: sew-in 720ms steps(13, end) both;
+  animation-delay: calc(760ms + var(--i, 0) * 82ms);
+}
+
+/* 缝完针才"落"在布角上——否则会有两根针，一根在动一根不动 */
+.cloth.is-sewing .cloth__needle {
+  animation: needle-settle 520ms ease-out 1700ms both;
+}
+
+@keyframes needle-settle {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.cloth.is-sewing .sheet__note {
+  animation: sew-in 620ms steps(10, end) both;
+  animation-delay: 1820ms;
+}
+
+.cloth__corner {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  color: rgba(72, 104, 138, 0.55);
+}
+
+.cloth__corner--tl { left: 12px; top: 12px; }
+.cloth__corner--tr { right: 12px; top: 12px; }
+.cloth__corner--bl { left: 12px; bottom: 12px; }
+.cloth__corner--br { right: 12px; bottom: 12px; }
+
+/* 布上那根针和线 */
+.cloth__needle {
+  position: absolute;
+  right: -26px;
+  top: -18px;
+  width: 96px;
+  height: 210px;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.cloth__needle line,
+.cloth__needle path,
+.cloth__needle ellipse {
+  vector-effect: non-scaling-stroke;
+}
+
+/* 诗题她可以自己写：悬停给一条底线，聚焦给一块干净的底 */
+.sheet__title[contenteditable] {
+  cursor: text;
+  border-radius: 2px;
+  /* 常驻一条很淡的虚线：这行字是能改的 */
+  box-shadow: inset 0 -1px 0 rgba(76, 27, 47, 0.3);
+  transition: box-shadow 170ms linear, background-color 170ms linear;
+}
+
+.sheet__title[contenteditable]:hover {
+  box-shadow: inset 0 -1px 0 rgba(76, 27, 47, 0.3);
+}
+
+.sheet__title[contenteditable]:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: 0 0 0 1px rgba(72, 104, 138, 0.45);
+}
+
+.sheet__title {
+  font-family: var(--brush);
+  font-size: clamp(22px, 2.2vw, 30px);
+  line-height: 1.5;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-indent: 0.12em;
+  color: #4A1A31;
+}
+
+/* 标题下不再画装饰虚线：留一条线，就是"这里能改"那一条 */
+
+.sheet__body {
+  margin: clamp(20px, 2.4vw, 30px) auto 0;
+  max-width: 21em;
+  min-height: 12em;
+  font-family: var(--book-cn);
+  font-size: clamp(15px, 1.16vw, 16.5px);
+  line-height: 2.2;
+  letter-spacing: 0.03em;
+  color: #2E1220;
+  outline: none;
+  white-space: pre-wrap;
+}
+
+.sheet__body p.stanza { margin: 0; }
+.sheet__body p.stanza + p.stanza { margin-top: 1.4em; }
+
+/* ---------------- 自由拼贴：能拖的字 ---------------- */
+
+.clipboard {
+  margin: clamp(18px, 2.2vw, 26px) auto 0;
+  max-width: 21em;
+}
+
+.clipboard__hint {
+  margin: 0 0 10px;
+  font-family: var(--book-cn);
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  color: #4A1A31;
+  text-align: center;
+}
+
+/* 行线：既是参考线，也是"布上机缝的横线" */
+.clipboard__reset {
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-family: var(--book-cn);
+  font-size: 11.5px;
+  color: var(--wine);
+  background: none;
+  border: 1px solid rgba(76, 27, 47, 0.24);
+  border-radius: 1px;
+  cursor: pointer;
+}
+
+.clipboard__reset:hover { border-color: var(--wine); background: rgba(255, 255, 255, 0.6); }
+
+.clipboard__field {
+  position: relative;
+  /* 高度要保证三行字片都在底部固定栏之上（实测 1000px 视口） */
+  height: clamp(230px, 27vh, 270px);
+  border-top: 1px dashed rgba(72, 104, 138, 0.24);
+  border-bottom: 1px dashed rgba(72, 104, 138, 0.24);
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0 calc(14% - 1.5px),
+    rgba(72, 104, 138, 0.16) calc(14% - 1.5px) 14%
+  );
+}
+
+/* 摆好之后立刻能看到"这首诗现在长什么样" */
+.clipboard__read {
+  margin: 0 auto 12px;
+  max-width: 22em;
+  font-family: var(--book-cn);
+  font-size: 13.5px;
+  line-height: 1.95;
+  color: #4A1A31;
+  text-align: center;
+  min-height: 1.6em;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(72, 104, 138, 0.28);
+}
+
+.clipboard__read b {
+  display: block;
+  font-weight: 400;
+  color: #33101F;
+}
+
+.slip {
+  position: absolute;
+  left: calc(var(--x, 0) * 100%);
+  top: calc(var(--y, 0) * 100%);
+  padding: 7px 12px 8px 20px;
+  font-family: var(--book-cn);
+  font-size: 14.5px;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+  color: #33101F;
+  background:
+    repeating-linear-gradient(92deg, rgba(110, 70, 85, 0.05) 0 1px, transparent 1px 4px),
+    linear-gradient(#fffdf8, #f6ead9);
+  border-radius: 1px 4px 1px 5px / 4px 1px 5px 1px;
+  box-shadow:
+    0 0 0 1px rgba(255, 252, 247, 0.9),
+    0 1px 1px rgba(60, 20, 35, 0.14),
+    0 6px 12px -8px rgba(60, 20, 35, 0.55);
+  transform: rotate(var(--r, 0deg));
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: box-shadow 180ms linear, transform 180ms var(--ease-soft);
+}
+
+.slip:hover { box-shadow:
+    0 0 0 1px rgba(255, 252, 247, 0.9),
+    0 3px 3px rgba(60, 20, 35, 0.16),
+    0 12px 18px -10px rgba(60, 20, 35, 0.6); }
+
+/* 拿起来的时候：抬起来、压平、影子拉长 */
+.slip.is-dragging {
+  cursor: grabbing;
+  z-index: 20;
+  transform: rotate(0deg) scale(1.06);
+  box-shadow:
+    0 0 0 1px rgba(255, 252, 247, 0.95),
+    0 10px 10px -8px rgba(60, 20, 35, 0.35),
+    0 22px 30px -18px rgba(60, 20, 35, 0.7);
+}
+
+.slip::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  width: 7px;
+  height: 9px;
+  margin-top: -4.5px;
+  background-image: radial-gradient(circle, rgba(76, 27, 47, 0.42) 1px, transparent 1.2px);
+  background-size: 3.5px 4.5px;
+}
+
+.slip:focus-visible { outline: 1.5px solid #4C1B2F; outline-offset: 3px; }
+
+/* 自由拼贴时不显示可编辑的诗块，也不给"自己改几句" */
+.cloth.is-free .sheet__body { display: none; }
+.cloth.is-free .clipboard { display: block; }
+
+.sheet__body.is-editing {
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 0 0 1px rgba(72, 104, 138, 0.4);
+  border-radius: 1px;
+  padding: 12px 14px;
+  margin-left: -14px;
+  margin-right: -14px;
+  cursor: text;
+}
+
+.sheet__note {
+  margin-top: clamp(20px, 2.6vw, 30px);
+  padding-top: 12px;
+  border-top: 1px dashed rgba(72, 104, 138, 0.32);
+  font-family: var(--book-cn);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #6B3B4A;
+  text-align: center;
+}
+
+.sheet__more {
+  display: none;
+  margin: 12px 0 0;
+  font-family: var(--book-cn);
+  font-size: 12px;
+  color: #5C3044;
+  text-align: center;
+}
+
+/* ----------------------------------------------------------------- rail */
+
+/* 参考里那排工具在布的上面：一条横杆，左边选排法，右边三件工具 */
+.rail--top {
+  max-width: 720px;
+  margin: 0 auto clamp(16px, 2.4vh, 26px);
+  padding-bottom: 12px;
+  border-bottom: 1.5px dashed rgba(72, 104, 138, 0.45);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 22px;
+}
+
+.rail__group { flex: 1 1 auto; min-width: 0; }
+.rail__group--tools { flex: 0 0 auto; }
+
+/* 布下面只留"存过的"和"带来的词"，安静一点 */
+.rail--foot {
+  max-width: 720px;
+  margin: clamp(18px, 2.6vh, 28px) auto 0;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(72, 104, 138, 0.3);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 26px;
+}
+
+.rail__label {
+  font-family: var(--book-cn);
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  color: #33101F;
+}
+
+.modes {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mode {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 7px 14px 7px 30px;
+  font-family: var(--book-cn);
+  font-size: 13.5px;
+  letter-spacing: 0.05em;
+  color: #5C3044;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1.5px dashed rgba(72, 104, 138, 0.45);
+  border-radius: 1px;
+  cursor: pointer;
+  transition: background-color 200ms linear, border-color 200ms linear, color 200ms linear;
+}
+
+/* 每个模式一枚线轴：中间那个点就是线的颜色，选中变成实针脚 */
+.mode::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(72, 104, 138, 0.6);
+}
+
+.mode[data-mode="free"]::before { border-color: #B4737F; }
+.mode[data-mode="recombine"]::before { border-color: #6E8FA8; }
+.mode[data-mode="random"]::before { border-color: #A98B5E; }
+
+.mode:hover { background: rgba(255, 255, 255, 0.7); }
+
+.mode.is-on {
+  color: #fffaf4;
+  border-style: solid;
+  border-color: var(--wine);
+  background: var(--wine);
+  font-weight: 600;
+}
+
+.mode.is-on .mode__hint { color: rgba(255, 250, 244, 0.72); }
+
+.mode.is-on::before { background: currentColor; }
+
+.mode__hint {
+  font-size: 10.5px;
+  letter-spacing: 0;
+  color: #7A4C5C;
+}
+
+/* 工具行 */
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.rail__btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  font-family: var(--book-cn);
+  font-size: 13.5px;
+  letter-spacing: 0.05em;
+  color: var(--wine);
+  background: rgba(255, 253, 248, 0.86);
+  border: 1px solid rgba(76, 27, 47, 0.2);
+  border-radius: 1px;
+  cursor: pointer;
+  transition: background-color 200ms linear, border-color 200ms linear;
+}
+
+.rail__btn:hover { background: #fff; border-color: var(--wine); }
+
+.rail__btn--save {
+  border-color: rgba(76, 27, 47, 0.55);
+  font-weight: 600;
+}
+
+.rail__btn__mark {
+  font-size: 12px;
+  color: #6E8FA8;
+}
+
+/* --------------------------------------------------------------- shelf */
+
+.shelf { margin-top: 10px; }
+
+.shelf__empty {
+  font-family: var(--book-cn);
+  font-size: 11.5px;
+  color: #6B3B4A;
+}
+
+.shelf__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px dotted rgba(76, 27, 47, 0.16);
+}
+
+.shelf__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 0;
+  font-family: var(--book-cn);
+  font-size: 13px;
+  color: var(--wine);
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shelf__title:hover { text-decoration: underline; }
+
+.shelf__meta {
+  flex: 0 0 auto;
+  font-family: var(--serif);
+  font-size: 10px;
+  color: #6B3B4A;
+  font-variant-numeric: tabular-nums;
+}
+
+.shelf__del {
+  flex: 0 0 auto;
+  padding: 2px 4px;
+  font-size: 10px;
+  color: #6B3B4A;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.shelf__del:hover { color: var(--wine); }
+
+/* ------------------------------------------------------------ wordlist */
+
+.wordlist {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 5px;
+}
+
+.wordlist__item {
+  padding: 3px 8px;
+  font-family: var(--book-cn);
+  font-size: 11.5px;
+  color: #4A1A31;
+  background: rgba(255, 253, 248, 0.85);
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgba(76, 27, 47, 0.14);
+}
+
+/* --------------------------------------------------------------- empty */
+
+.make__empty {
+  max-width: 34em;
+  margin: 40px auto;
+  padding: 26px 0;
+  font-family: var(--book-cn);
+  font-size: 14px;
+  line-height: 2;
+  color: #4A1A31;
+}
+
+.make__empty a {
+  color: var(--wine);
+  border-bottom: 1px solid rgba(76, 27, 47, 0.45);
+  text-decoration: none;
+}
+
+/* ----------------------------------------------------------------- bar */
+
+.make-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+  background: #eed6d8;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.4) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.3) 0 1px, transparent 1px 3px);
+  border-top: 1px dashed rgba(72, 104, 138, 0.45);
+}
+
+.make-bar__inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-inline: clamp(18px, 4vw, 44px);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.make-bar__hint {
+  font-family: var(--book-cn);
+  font-size: 12px;
+  color: #5C3044;
+}
+
+.make-bar__go {
+  margin-left: auto;
+  padding: 12px 30px;
+  font-family: var(--brush);
+  font-size: clamp(15px, 1.25vw, 18px);
+  letter-spacing: 0.12em;
+  color: #fdf8f2;
+  background: var(--wine);
+  border: 0;
+  border-radius: 1px;
+  cursor: pointer;
+  transition: background-color 240ms var(--ease-soft), transform 240ms var(--ease-soft);
+}
+
+.make-bar__go:hover { background: var(--wine-lift); transform: translateY(-1px); }
+
+/* --------------------------------------------------------------- narrow */
+
+@media (max-width: 860px) {
+  .cloth__needle { right: -14px; top: -12px; width: 62px; height: 150px; }
+  .sheet__more { display: block; }
+  .modes { gap: 6px; }
+  .mode { flex: 1 1 auto; justify-content: center; padding: 12px 10px 12px 26px; }
+  .rail__btn { padding: 12px 14px; }
+  .mode__hint { display: none; }
+  .tools { gap: 8px; }
+  .rail__btn { flex: 1 1 auto; justify-content: center; }
+  .make-bar__hint { display: none; }
+  .make-bar__go { flex: 1 1 100%; margin-left: 0; text-align: center; }
+  body.is-make { padding-bottom: 96px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode, .rail__btn, .make-bar__go { transition-duration: 1ms; }
+
+  .cloth.is-sewing .stitch rect[pathLength],
+  .cloth.is-sewing .sew-needle,
+  .cloth.is-sewing .sheet__title,
+  .cloth.is-sewing .line,
+  .cloth.is-sewing .sheet__note {
+    animation: none;
+  }
+
+  /* 不动的时候绣线要在，动的那根针不要，布角那根照旧挂着 */
+  .cloth.is-sewing .stitch rect[pathLength] { stroke-dashoffset: 0; }
+  .cloth.is-sewing .sew-needle { opacity: 0; }
+  .cloth.is-sewing .cloth__needle { animation: none; opacity: 1; }
+}
+
+/* 走针靠 offset-path 沿布边跑。老 Firefox / 老 Safari 不认 path()，
+   针会僵在左上角 —— 那种情况直接把针藏起来，绣线照样一针一针出现。 */
+@supports not (offset-path: path("M 0 0 H 10")) {
+  .cloth.is-sewing .sew-needle { display: none; }
+}

@@ -1,0 +1,579 @@
+/* re:poem — module 05: 新生命
+   左边一条窄控制栏，右边一张海报。海报是 900×675 的固定版面，用 transform
+   缩放到容器里，所以导出的 PNG 和屏幕上看的一模一样。                    */
+
+body.is-design {
+  --bg-ink: 0.66;          /* 底图浓度：一处可调 */
+  height: auto;
+  min-height: 100vh;    /* 老浏览器兜底 */
+  min-height: 100dvh;
+  color: var(--wine);
+  padding-bottom: 110px;
+  background-color: #ece0d6;
+}
+
+/* 和模块 03 用同一张眼睛油画：固定铺满视口，滚动时画不动。
+   横向镜像，眼睛落到右边（海报后面），左边控制栏留白给字。 */
+body.is-design::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: url("../assets/img/lib-bg-web.jpg") center top / cover no-repeat;
+  opacity: var(--bg-ink);
+  transform: scaleX(-1);
+  pointer-events: none;
+}
+
+/* 纸色渐隐：左侧控制栏压重，右侧让画透出来 */
+body.is-design::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    96deg,
+    rgba(250, 240, 238, 0.62) 0%,
+    rgba(250, 240, 238, 0.5) 28%,
+    rgba(250, 240, 238, 0.18) 58%,
+    rgba(250, 240, 238, 0.04) 100%
+  );
+  pointer-events: none;
+}
+
+/* 竖版底图会让海报被"可用高度"卡住，所以头部压紧一点，把高度让给海报 */
+.design {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: clamp(14px, 2vh, 24px) clamp(16px, 3.4vw, 40px) 0;
+}
+
+.design__eyebrow {
+  font-family: var(--serif);
+  font-size: 10.5px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #5C3044;
+}
+
+.design__back {
+  margin-left: 8px;
+  color: #5C3044;
+  text-decoration: none;
+  letter-spacing: 0.06em;
+  border-bottom: 1px dotted rgba(76, 27, 47, 0.4);
+}
+
+.design__back:hover { color: var(--wine); border-bottom-color: var(--wine); }
+
+.design__title {
+  margin-top: 4px;
+  font-family: var(--brush);
+  font-size: clamp(26px, 2.9vw, 38px);
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  color: var(--wine);
+}
+
+/* ---------------------------------------------------------------- body */
+
+.design__body {
+  margin-top: clamp(12px, 1.8vh, 20px);
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  gap: clamp(18px, 2.6vw, 36px);
+  align-items: start;
+}
+
+/* ----------------------------------------------------------------- rail */
+
+.rail {
+  position: sticky;
+  top: 22px;
+  display: grid;
+  gap: 16px;
+}
+
+.rail__group {
+  padding-bottom: 14px;
+  border-bottom: 1px dashed rgba(76, 27, 47, 0.18);
+}
+
+.rail__group:last-child { border-bottom: 0; }
+
+.rail__label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--book-cn);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  color: #5C3044;
+  margin-bottom: 8px;
+}
+
+.rail__out {
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--wine);
+  font-variant-numeric: tabular-nums;
+}
+
+.bglist {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.bgpick {
+  position: relative;
+  padding: 0;
+  aspect-ratio: 3 / 4;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(76, 27, 47, 0.16);
+  border-radius: 1px;
+  cursor: pointer;
+  transition: box-shadow 160ms linear, transform 160ms var(--ease-soft);
+}
+
+.bgpick:hover { transform: translateY(-1px); box-shadow: 0 4px 10px -6px rgba(60, 20, 35, 0.6); }
+
+.bgpick.is-on {
+  box-shadow: 0 0 0 2px var(--wine), 0 4px 10px -6px rgba(60, 20, 35, 0.6);
+}
+
+.fontlist { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+
+.fontpick {
+  padding: 7px 6px;
+  font-size: 14px;
+  color: #3B1122;
+  background: rgba(255, 253, 248, 0.7);
+  border: 1px solid rgba(76, 27, 47, 0.16);
+  border-radius: 1px;
+  cursor: pointer;
+  transition: border-color 160ms linear, background-color 160ms linear;
+}
+
+.fontpick:hover { background: #fff; }
+.fontpick.is-on { border-color: var(--wine); background: #fff; font-weight: 600; }
+
+.range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  background: rgba(76, 27, 47, 0.2);
+  border-radius: 2px;
+  outline: none;
+}
+
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--wine);
+  border: 2px solid #fbf1ea;
+  cursor: pointer;
+}
+
+.range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--wine);
+  border: 2px solid #fbf1ea;
+  cursor: pointer;
+}
+
+.alignlist { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.alignpick {
+  padding: 6px 10px;
+  font-family: var(--book-cn);
+  font-size: 12.5px;
+  color: #3B1122;
+  background: rgba(255, 253, 248, 0.7);
+  border: 1px solid rgba(76, 27, 47, 0.16);
+  border-radius: 1px;
+  cursor: pointer;
+  transition: border-color 160ms linear, background-color 160ms linear, color 160ms linear;
+}
+
+.alignpick:hover { background: #fff; }
+
+.alignpick.is-on {
+  border-color: var(--wine);
+  background: var(--wine);
+  color: #fdf8f2;
+}
+
+/* ---------------------------------------------------------------- stage */
+
+.stage {
+  min-width: 0;
+}
+
+.holder {
+  position: relative;
+  margin: 0 auto;
+  width: 900px;
+  height: 675px;
+}
+
+.frame {
+  position: absolute;
+  width: 900px;
+  height: 675px;
+  visibility: hidden;
+  background-size: cover;
+  background-position: center;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5),
+    0 26px 50px -30px rgba(60, 20, 35, 0.75);
+  overflow: hidden;
+}
+
+.frame__lines { position: absolute; inset: 0; }
+
+/* 一行字一条白纸条 —— 参考图里那种打字纸条 */
+.strip {
+  position: absolute;
+  margin: 0;
+  padding: 7px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  color: #1c1a18;
+  background: none;
+  transform: rotate(var(--rot, 0deg));
+}
+
+/* 纸本身：毛边、纸纹、影子都长在这一层，文字层单独留在上面不糊 */
+.strip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/><feColorMatrix type='saturate' values='0'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.5'/></svg>") 0 0 / 120px 120px,
+    linear-gradient(180deg, #fefcf7 0%, #fbf6ec 70%, #f3ebdb 100%);
+  background-blend-mode: multiply, normal;
+  opacity: 0.99;
+  filter: url(#paperEdge);
+  box-shadow:
+    0 0 0 0.5px rgba(60, 40, 30, 0.12),
+    0 1px 1px rgba(40, 30, 25, 0.16),
+    0 8px 15px -8px rgba(40, 30, 25, 0.62);
+}
+
+/* 诗题那张纸再暖一点：tint 要画在 ::before 上，画在 .strip 上会把纸层整个盖住 */
+.strip--title::before {
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/><feColorMatrix type='saturate' values='0'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.5'/></svg>") 0 0 / 120px 120px,
+    linear-gradient(180deg, #fdf6e8 0%, #f7edd9 70%, #efe2c9 100%);
+  background-blend-mode: multiply, normal;
+}
+
+.alignpick.is-on ~ .stage .strip { cursor: default; }
+
+.frame.is-free .strip { cursor: grab; }
+.frame.is-free .strip.is-dragging {
+  cursor: grabbing;
+  z-index: 20;
+  box-shadow: 0 10px 18px -10px rgba(40, 30, 25, 0.7);
+}
+
+.stage__hint {
+  margin: 14px 0 0;
+  font-family: var(--book-cn);
+  font-size: 11.5px;
+  color: #6B3B4A;
+  text-align: center;
+}
+
+/* ----------------------------------------------------------------- bar */
+
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+  background: #ece0d6;
+  border-top: 1px dashed rgba(76, 27, 47, 0.24);
+}
+
+.bar__inner {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding-inline: clamp(16px, 3.4vw, 40px);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.bar__hint {
+  font-family: var(--book-cn);
+  font-size: 12px;
+  color: #5C3044;
+}
+
+.bar__go {
+  margin-left: auto;
+  padding: 12px 30px;
+  font-family: var(--brush);
+  font-size: clamp(15px, 1.25vw, 18px);
+  letter-spacing: 0.12em;
+  color: #fdf8f2;
+  background: var(--wine);
+  border: 0;
+  border-radius: 1px;
+  cursor: pointer;
+  transition: background-color 240ms var(--ease-soft), transform 240ms var(--ease-soft);
+}
+
+.bar__go:hover { background: var(--wine-lift); transform: translateY(-1px); }
+
+/* --------------------------------------------------------------- empty */
+
+.design__empty {
+  max-width: 34em;
+  margin: 60px auto;
+  font-family: var(--book-cn);
+  font-size: 14px;
+  line-height: 2;
+  color: #3B1122;
+  text-align: center;
+}
+
+.design__empty a { color: var(--wine); }
+
+.design__demo {
+  margin-top: 18px;
+  padding: 11px 22px;
+  font-family: var(--book-cn);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--wine);
+  background: rgba(255, 253, 248, 0.85);
+  border: 1px solid rgba(76, 27, 47, 0.3);
+  border-radius: 1px;
+  cursor: pointer;
+}
+
+.design__demo:hover { background: #fff; border-color: var(--wine); }
+
+/* ---------------------------------------------------------------- 保存窗 */
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(48, 24, 34, 0.55);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.sheet[hidden] { display: none; }
+
+.sheet__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  padding: 26px 26px 22px;
+  background: #fbf1ea;
+  border-radius: 2px;
+  box-shadow: 0 30px 70px -30px rgba(30, 10, 20, 0.8);
+}
+
+.sheet__close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #6B3B4A;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.sheet__title {
+  font-family: var(--brush);
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--wine);
+}
+
+.sheet__card {
+  margin: 16px 0 8px;
+  background: #efe5da;
+  border: 1px solid rgba(76, 27, 47, 0.12);
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sheet__card img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.sheet__note {
+  font-family: var(--book-cn);
+  font-size: 11px;
+  color: #6B3B4A;
+  text-align: right;
+}
+
+.sheet__actions {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.act {
+  padding: 11px 12px;
+  font-family: var(--book-cn);
+  font-size: 13.5px;
+  letter-spacing: 0.06em;
+  color: var(--wine);
+  background: rgba(255, 253, 248, 0.8);
+  border: 1px solid rgba(76, 27, 47, 0.24);
+  border-radius: 1px;
+  cursor: pointer;
+  transition: background-color 180ms linear, border-color 180ms linear, color 180ms linear;
+}
+
+.act:hover { background: #fff; border-color: var(--wine); }
+
+/* 五个按钮 2+2+1 最后一行只挂一个会很空，让它跨两列 */
+.act--full { grid-column: 1 / -1; }
+
+.act--main {
+  color: #fdf8f2;
+  background: var(--wine);
+  border-color: var(--wine);
+}
+
+.act--main:hover { background: var(--wine-lift); border-color: var(--wine-lift); }
+
+.sheet__sub {
+  margin-top: 10px;
+  font-family: var(--book-cn);
+  font-size: 11px;
+  line-height: 1.8;
+  color: #6B3B4A;
+}
+
+.sheet__link {
+  padding: 0;
+  font: inherit;
+  color: var(--wine);
+  background: none;
+  border: 0;
+  border-bottom: 1px dotted rgba(76, 27, 47, 0.5);
+  cursor: pointer;
+}
+
+.sheet__label {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(76, 27, 47, 0.2);
+  font-family: var(--book-cn);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  color: #5C3044;
+}
+
+.works {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+}
+
+.works__empty {
+  font-family: var(--book-cn);
+  font-size: 12px;
+  color: #6B3B4A;
+}
+
+.work {
+  position: relative;
+  margin: 0;
+}
+
+.work img {
+  display: block;
+  width: 100%;
+  border: 1px solid rgba(76, 27, 47, 0.16);
+}
+
+.work figcaption {
+  margin-top: 4px;
+  font-family: var(--book-cn);
+  font-size: 11px;
+  color: #3B1122;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.work__del {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  padding: 1px 5px;
+  font-size: 10px;
+  color: #fdf8f2;
+  background: rgba(48, 24, 34, 0.6);
+  border: 0;
+  border-radius: 1px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 160ms linear;
+}
+
+.work:hover .work__del { opacity: 1; }
+
+/* --------------------------------------------------------------- narrow */
+
+@media (max-width: 900px) {
+  /* 手机上一屏装不下「左栏 + 海报」，所以把海报提到最前面：
+     先看见成品，再往下调。 */
+  .design__body { grid-template-columns: minmax(0, 1fr); }
+  .stage { order: -1; }
+  .rail {
+    position: static;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .fontlist { grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); }
+  .bglist { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stage__hint { margin-top: 10px; }
+  .rail__group { padding-bottom: 10px; }
+  .bglist { grid-template-columns: repeat(4, 1fr); }
+  .bar__hint { display: none; }
+  .bar__go { flex: 1 1 100%; margin-left: 0; text-align: center; }
+  body.is-design { padding-bottom: 84px; }
+  .sheet__actions { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bgpick, .bar__go, .act { transition-duration: 1ms; }
+}

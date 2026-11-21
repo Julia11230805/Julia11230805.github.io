@@ -1,0 +1,176 @@
+/* re:poem — module 01: cover
+   The illustration IS the page. Type is a colophon set inside the
+   sheet's own empty band above the forehead — never over the eyes,
+   the tear or the flowers.                                                    */
+
+.cover {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+/* ---- the film ------------------------------------------------------------ */
+
+.cover__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* biasing the crop upward keeps the illustration's empty band — where the
+     type lives — inside the viewport on wide screens, instead of cropping it */
+  object-position: 50% 18%;
+  /* never transform this element: any scale would resample the artwork */
+  background: var(--paper);
+}
+
+/* ---- the stage ----------------------------------------------------------
+   A box that exactly matches the artwork's rendered rectangle under
+   object-fit: cover, so percentages inside it are percentages of the
+   painting. Sized by js/modules/stage.js.                                    */
+
+.stage {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.stage__type {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* y ≈ 13.6% of the sheet → inside the blank band (measured: y 160–300 of 1196) */
+  top: 13.6%;
+  text-align: center;
+  pointer-events: auto;
+}
+
+/* ---- the mark ----------------------------------------------------------- */
+
+.mark {
+  font-family: var(--script);
+  font-size: var(--size-mark);
+  line-height: 1.15;
+  letter-spacing: var(--tracking-mark);
+  /* compensate the trailing letter-space so the word sits optically centred */
+  text-indent: var(--tracking-mark);
+  color: var(--wine);
+  text-transform: lowercase;
+  font-variant-ligatures: none;
+}
+
+/* ---- the Chinese line ---------------------------------------------------
+   赐予诗歌第二次生命 — the brush face's curling strokes answer the film's ink.
+   Sized a step under the mark so it reads as a subtitle, not a second logo. */
+
+.subtitle {
+  margin-top: clamp(8px, 0.85vw, 12px);
+  font-family: var(--brush);
+  font-size: var(--size-cn);
+  line-height: 1.5;
+  letter-spacing: var(--tracking-cn);
+  text-indent: var(--tracking-cn);
+  color: var(--wine);
+  font-weight: 400;
+}
+
+/* ---- the prompt --------------------------------------------------------- */
+
+.start {
+  display: inline-block;
+  margin-top: clamp(6px, 0.7vw, 10px);
+  /* 44px-tall hit area without inflating the type */
+  padding: 16px 22px 17px;
+  font-family: var(--script);
+  font-size: var(--size-prompt);
+  line-height: 1;
+  letter-spacing: var(--tracking-prompt);
+  color: var(--wine);
+  transition: color var(--dur-hover) var(--ease-soft);
+}
+
+.start__label {
+  position: relative;
+  display: inline-block;
+  text-indent: var(--tracking-prompt);
+}
+
+/* a hairline that draws itself in on hover — the only ornament on the page */
+.start__label::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: var(--tracking-prompt);
+  bottom: -7px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.4;
+  transform: scaleX(0);
+  transform-origin: 50% 50%;
+  transition: transform var(--dur-hover) var(--ease-soft),
+              opacity var(--dur-hover) var(--ease-soft);
+}
+
+.start:hover,
+.start:focus-visible { color: var(--wine-lift); }
+
+.start:hover .start__label::after,
+.start:focus-visible .start__label::after,
+.start:active .start__label::after {
+  transform: scaleX(1);
+}
+
+.start:active { color: var(--wine-deep); }
+
+/* ---- entrance ----------------------------------------------------------- */
+
+.stage__type {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity var(--dur-enter) var(--ease-soft),
+              transform var(--dur-enter) var(--ease-soft);
+}
+
+.is-ready .stage__type {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---- the veil: page transition ------------------------------------------ */
+
+.veil {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-veil) var(--ease-veil);
+}
+
+.is-leaving .veil { opacity: 1; }
+
+/* while leaving, the prompt must not react to a second click */
+.is-leaving .stage { pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .stage__type { opacity: 1; transform: none; }
+}
+
+/* ---- narrow screens ----------------------------------------------------- */
+
+@media (max-width: 640px) {
+  :root {
+    --size-mark: 20px;
+    --size-cn: 18px;
+    --size-prompt: 13px;
+    --tracking-mark: 0.02em;
+    --tracking-prompt: 0.04em;
+    --tracking-cn: 0.12em;
+  }
+  .stage__type { top: 10.4%; }
+  .start {
+    margin-top: 14px;
+    padding: 17px 24px;      /* keeps the hit target above 44px */
+  }
+}

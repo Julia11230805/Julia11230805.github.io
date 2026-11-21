@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>re:poem — 收集你的诗歌碎片</title>
+  <meta name="description" content="从余秀华诗里的词语开始，挑出你自己的诗歌碎片。">
+  <meta name="theme-color" content="#FBF0F0">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/library.css">
+</head>
+<body class="is-library">
+
+  <main class="library">
+    <header class="library__head">
+      <p class="library__eyebrow">module 03 · 素材库</p>
+      <h1 class="library__title">收集你的诗歌碎片</h1>
+    </header>
+
+    <div class="library__controls">
+      <div class="tabs" id="tabs" role="tablist" aria-label="关键词分类"></div>
+      <div class="search" id="searchWrap">
+        <svg class="search__icon" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">
+          <circle cx="5.4" cy="5.4" r="4.1" fill="none" stroke="currentColor" stroke-width="1.1"/>
+          <path d="M8.6 8.6 L12 12" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        </svg>
+        <input id="search" type="search" placeholder="找一个词…"
+               autocomplete="off" aria-label="搜索关键词">
+        <button class="search__clear" id="searchClear" type="button" aria-label="清除搜索">✕</button>
+      </div>
+    </div>
+
+    <section class="recommend" id="recommend" hidden aria-live="polite">
+      <p class="recommend__label" id="recommendLabel"></p>
+      <div class="field" id="recommendField" style="min-height:0;margin-top:12px"></div>
+    </section>
+
+    <div class="field" id="field"></div>
+
+    <div class="slip" id="slip" hidden>
+      <input id="customInput" maxlength="12" placeholder="写一个你自己的词…"
+             autocomplete="off" aria-label="自定义关键词">
+      <button id="customAdd" type="button">添上</button>
+      <span class="hint-inline">不超过 12 个字，回车也行</span>
+    </div>
+  </main>
+
+  <div class="bar">
+    <div class="bar__inner">
+      <p class="bar__count" id="count"><b>0</b> 个词</p>
+      <div class="bar__picked" id="picked" aria-label="已选关键词"></div>
+      <button class="bar__go" id="go" type="button">进入拼贴工作台</button>
+    </div>
+  </div>
+
+  <!-- torn-paper edge: the filter only touches the paper layer, never the type -->
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <filter id="tornEdge" x="-10%" y="-16%" width="120%" height="132%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.085 0.11" numOctaves="5"
+                    seed="9" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="7"
+                         xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
+
+  <script src="js/app.js?v=20261120c"></script>
+  <script src="js/data/lexicon.js?v=20261120c"></script>
+  <script src="js/modules/library.js?v=20261120c"></script>
+  <script>RePoem.boot();</script>
+</body>
+</html>

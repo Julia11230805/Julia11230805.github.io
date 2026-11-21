@@ -1,0 +1,49 @@
+/* re:poem — design tokens
+   All values are sampled from the artwork itself, not invented:
+   the sheet, the ink, the wine wash.                                  */
+
+:root {
+  /* colour — pulled from the cover illustration */
+  --paper:        #FBF0F0;   /* the sheet (rgb 251 240 240)            */
+  --paper-deep:   #F3E3E4;   /* paper in the shadowed lower corner     */
+  --wine:         #4C1B2F;   /* the illustration's own ink (median)    */
+  --wine-deep:    #2C0C1B;   /* the darkest strokes                    */
+  --wine-lift:    #7E2A42;   /* wine, lifted for interaction           */
+  --wine-wash:    #886878;   /* the thinned wash                       */
+  --page:         #FAF2EC;   /* the book's stock, a touch warmer than  */
+
+  /* type */
+  --serif: "Palatino Linotype", "Book Antiqua", Palatino, "Sitka Text",
+           Cambria, Georgia, "Times New Roman", serif;
+
+  /* display faces — curly, hand-written. Both are already installed on the
+     machine, so nothing is fetched and nothing delays first paint. */
+  --script: "Segoe Script", "Brush Script MT", "Gabriola",
+            "Lucida Handwriting", "URW Chancery L", cursive;
+  --brush: "STXingkai", "华文行楷", "FZShuTi", "方正舒体",
+           "KaiTi", "楷体", "STKaiti", "华文楷体", cursive;
+  /* body copy inside the book: a screen-reading 宋体, never a "web font" look */
+  --book-cn: "Songti SC", "STSong", "SimSun", "宋体", "Source Han Serif SC",
+             "Noto Serif SC", serif;
+
+  /* script faces carry their own rhythm — wide tracking breaks them apart,
+     so the Latin runs nearly solid; the Chinese keeps a little, which reads
+     as typesetting rather than as a logo. */
+  --tracking-mark: 0.02em;
+  --tracking-prompt: 0.04em;
+  --tracking-cn: 0.14em;
+
+  /* scale — a colophon, not a headline; the mark leads, the prompt follows */
+  /* script faces run small on the x-height, so the mark is set a step up from
+     what a serif would need to hold the same visual weight */
+  --size-mark: clamp(21px, 1.85vw, 26px);
+  --size-cn: clamp(18px, 1.6vw, 24px);
+  --size-prompt: clamp(13.5px, 0.95vw, 15px);
+
+  /* motion */
+  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-veil: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-enter: 1100ms;
+  --dur-veil: 620ms;
+  --dur-hover: 420ms;
+}

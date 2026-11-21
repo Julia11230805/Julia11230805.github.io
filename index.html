@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>re:poem — 文字的第二次生命</title>
+  <meta name="description" content="以余秀华诗歌中的主题、意象与情感为灵感的互动式数字诗歌实验。">
+  <meta name="theme-color" content="#FBF0F0">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/cover.css">
+</head>
+<body class="is-cover">
+
+  <main class="cover" id="cover">
+
+    <!-- the artwork. No overlay, no filter, no transform touches it. -->
+    <video
+      class="cover__video"
+      id="coverVideo"
+      src="assets/video/repoem-cover.mp4"
+      poster="assets/poster/first-frame.jpg"
+      autoplay muted loop playsinline preload="auto"
+      disablepictureinpicture
+      aria-hidden="true" tabindex="-1"></video>
+
+    <!-- type sits inside this box, which is measured to the artwork's own rectangle -->
+    <div class="stage" id="stage">
+      <div class="stage__type">
+        <p class="mark">re:poem</p>
+        <p class="subtitle">赐予诗歌第二次生命</p>
+        <button class="start" id="startBtn" type="button" aria-label="click to start — 进入">
+          <span class="start__label">click to start</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="veil" id="veil" aria-hidden="true"></div>
+
+  </main>
+
+  <script src="js/app.js"></script>
+  <script src="js/modules/stage.js"></script>
+  <script src="js/modules/autoplay.js"></script>
+  <script src="js/modules/transition.js"></script>
+  <script src="js/modules/cover.js"></script>
+  <script>RePoem.boot();</script>
+</body>
+</html>

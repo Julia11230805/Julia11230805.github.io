@@ -1,0 +1,72 @@
+/* re:poem — base layer: reset, page shell, primitives */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html,
+body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--wine);
+  font-family: var(--serif);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, p, figure { margin: 0; }
+
+button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--wine);
+  color: var(--paper);
+}
+
+/* focus: visible, quiet, in the artwork's own colour */
+:focus-visible {
+  outline: 1px solid var(--wine);
+  outline-offset: 6px;
+}
+
+img,
+video { display: block; max-width: 100%; }
+
+/* body-lock only for the cover: the artwork is the viewport */
+body.is-cover {
+  overflow: hidden;
+  background: var(--paper-deep);
+  overscroll-behavior: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

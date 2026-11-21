@@ -1,0 +1,553 @@
+/* re:poem — module 02: the book
+   A page-turning book built from CSS 3D. No canvas, no WebGL, no textures:
+   every page is real text, so Chinese stays sharp at any zoom.
+
+   Spread mode (desktop): leaves hinge on the spine; the back of each leaf is
+   the left-hand page of the next spread.
+   Single mode (phones): the spread would be two 180px columns of Chinese, so
+   the book becomes one page at a time and the leaf turns away from the spine. */
+
+/* ---------------------------------------------------------------- the room */
+
+body.is-book {
+  background: var(--paper);
+  min-height: 100vh;    /* 老浏览器兜底 */
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 4vh, 56px) clamp(12px, 4vw, 48px);
+  overflow-x: hidden;
+}
+
+.book-hint {
+  position: fixed;
+  left: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  font-family: var(--book-cn);
+  font-size: 12.5px;
+  letter-spacing: 0.14em;
+  color: rgba(136, 104, 120, 0.92);
+  opacity: 0;
+  transition: opacity 900ms var(--ease-soft) 1200ms;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.is-book-ready .book-hint { opacity: 0.9; }
+
+/* ---------------------------------------------------------------- the book */
+
+.book {
+  --page-w: min(46vw, 520px);
+  --page-h: calc(var(--page-w) * 1.42);
+  --flip: 980ms;
+  position: relative;
+  width: calc(var(--page-w) * 2);
+  height: var(--page-h);
+  perspective: 2600px;
+  perspective-origin: 50% 42%;
+}
+
+/* the stack of leaves sits on the right half; each hinges on the spine */
+.book__pages {
+  position: absolute;
+  inset: 0;
+  left: 50%;
+  width: var(--page-w);
+  height: var(--page-h);
+  transform-style: preserve-3d;
+  transition: left 620ms var(--ease-soft);
+}
+
+/* closed: the cover is a single page in the middle of the table, not the right
+   half of an open spread with a blank leaf beside it */
+.book.is-closed .book__pages { left: calc(50% - var(--page-w) / 2); }
+.book.is-closed .book__spine { opacity: 0; }
+.book.is-closed .book__desk {
+  left: calc(50% - var(--page-w) / 2 - 8px);
+  right: calc(50% - var(--page-w) / 2 - 8px);
+}
+
+/* the block of paper the leaves rest on, so the spread reads as a book */
+.book__desk {
+  position: absolute;
+  inset: 6px -8px -10px -8px;
+  background: linear-gradient(180deg, #efe4dd, #e6d8d0);
+  box-shadow:
+    0 2px 2px rgba(60, 20, 35, 0.12),
+    0 18px 40px -18px rgba(60, 20, 35, 0.45),
+    0 40px 80px -50px rgba(60, 20, 35, 0.5);
+  border-radius: 3px;
+}
+
+/* closed, the block of leaves shows along the spine — a few hairlines of paper */
+.book.is-closed .book__desk {
+  border-radius: 2px 4px 4px 2px;
+  box-shadow:
+    -2px 0 0 -1px #e7d8d0,
+    -4px 0 0 -2px #dccabf,
+    -6px 0 0 -3px #d3bfb3,
+    0 2px 2px rgba(60, 20, 35, 0.14),
+    0 18px 34px -16px rgba(60, 20, 35, 0.42),
+    0 44px 70px -46px rgba(60, 20, 35, 0.45);
+}
+
+.book__spine {
+  transition: opacity 400ms linear;
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  margin-left: -20px;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+    rgba(60, 20, 35, 0) 0%,
+    rgba(60, 20, 35, 0.10) 38%,
+    rgba(60, 20, 35, 0.22) 50%,
+    rgba(60, 20, 35, 0.10) 62%,
+    rgba(60, 20, 35, 0) 100%);
+  z-index: 40;
+}
+
+/* ---------------------------------------------------------------- a leaf */
+
+.leaf {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--page-w);
+  height: var(--page-h);
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  transition: transform var(--flip) cubic-bezier(0.42, 0.02, 0.32, 1);
+  will-change: transform;
+}
+
+.leaf.is-turned { transform: rotateY(-180deg); }
+
+/* dragging: no transition, the transform follows the pointer */
+.leaf.is-dragging { transition: none; }
+
+.face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  background: var(--page);
+  box-shadow: 0 1px 3px rgba(60, 20, 35, 0.16);
+}
+
+/* the back of a leaf is the page you see on the LEFT of the next spread */
+.face--back {
+  transform: rotateY(180deg);
+}
+
+/* paper: a very light fibre noise, generated, so nothing is fetched */
+.face::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    repeating-linear-gradient(92deg, rgba(120, 90, 80, 0.022) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(2deg, rgba(120, 90, 80, 0.018) 0 1px, transparent 1px 4px);
+  mix-blend-mode: multiply;
+}
+
+/* shading toward the spine, so a flat page still reads as a bound one */
+.face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+    rgba(60, 20, 35, 0.10) 0%,
+    rgba(60, 20, 35, 0.02) 6%,
+    rgba(60, 20, 35, 0) 14%);
+}
+
+.face--back::after {
+  background: linear-gradient(270deg,
+    rgba(60, 20, 35, 0.10) 0%,
+    rgba(60, 20, 35, 0.02) 6%,
+    rgba(60, 20, 35, 0) 14%);
+}
+
+/* the moving shadow the turning leaf throws on the page under it */
+.leaf::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(40, 12, 24, 0.28), rgba(40, 12, 24, 0) 55%);
+  transition: opacity var(--flip) linear;
+}
+
+.leaf.is-lifting::before { opacity: 1; }
+
+/* ---------------------------------------------------------------- a page */
+
+.page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: clamp(26px, 3.4vw, 46px) clamp(24px, 3vw, 42px);
+  color: var(--wine);
+  display: flex;
+  flex-direction: column;
+  /* the illustration sits under a paper wash: the page stops looking empty,
+     and the wine type stays legible over the darker vines */
+  background-color: var(--page);
+  background-image:
+    linear-gradient(rgba(250, 242, 236, 0.74), rgba(250, 242, 236, 0.74)),
+    url("../assets/img/page-bg-web.jpg");
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+}
+
+.page__folio {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(14px, 1.8vw, 22px);
+  padding: 0;
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--wine-wash);
+  text-align: center;
+  font-variant-numeric: oldstyle-nums;
+}
+
+/* --- cover ------------------------------------------------------------ */
+
+.page--cover {
+  /* no margin: the plate takes the full width of the cover, so the empty band
+     above and below it is as small as the artwork's own proportion allows */
+  padding: 0;
+  padding-bottom: clamp(44px, 4.6vw, 58px);
+  background: #f2e7e1;
+  display: grid;
+  place-items: center;
+}
+
+/* contain, not cover: the artwork is nearly square and the page is not.
+   Cropping it would cut the eyes and the flowers out of the composition. */
+.page--cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--paper);
+}
+
+.page--cover .cover-mark {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: clamp(16px, 2vw, 24px);
+  padding-top: 12px;
+  border-top: 1px solid rgba(76, 27, 47, 0.18);
+  text-align: center;
+  font-family: var(--script);
+  font-size: clamp(16px, 1.5vw, 20px);
+  letter-spacing: 0.04em;
+  color: var(--wine);
+}
+
+/* --- portrait --------------------------------------------------------- */
+
+.page--portrait { justify-content: center; align-items: center; gap: 18px; }
+
+.portrait {
+  width: 92%;          /* a touch of inner margin keeps the photo off the gutter */
+  /* the photograph is almost square; a 3:4 frame would slice both sides off it */
+  aspect-ratio: 1 / 1;
+  max-height: 58%;
+  overflow: hidden;
+  background: #e9dcd6;
+  /* a hairline, the way a plate is ruled into a page — keeps the photograph
+     from floating above the paper */
+  border: 1px solid rgba(76, 27, 47, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(251, 240, 240, 0.35);
+  display: grid;
+  place-items: center;
+}
+
+.portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* a documentary still printed on cream stock: hold the blacks, warm them a touch */
+  filter: grayscale(1) contrast(1.04) sepia(0.06) brightness(1.02);
+}
+
+.portrait__fallback {
+  font-family: var(--brush);
+  font-size: clamp(15px, 1.4vw, 19px);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--wine-wash);
+  text-align: center;
+  line-height: 2;
+  padding: 0 18px;
+}
+
+.portrait__hint {
+  display: block;
+  margin-top: 10px;
+  font-family: var(--serif);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: rgba(136, 104, 120, 0.66);
+}
+
+.portrait__caption {
+  font-family: var(--brush);
+  font-size: clamp(15px, 1.25vw, 18px);
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  color: var(--wine);
+}
+
+.portrait__sub {
+  margin-top: -10px;
+  font-family: var(--serif);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  color: var(--wine-wash);
+}
+
+/* --- the introduction -------------------------------------------------- */
+
+.page--text {
+  font-family: var(--book-cn);
+  font-size: clamp(14px, 1.12vw, 16.5px);
+  line-height: 2.2;
+  justify-content: center;
+  text-align: justify;
+  text-justify: inter-ideograph;
+  hyphens: none;
+}
+
+/* where there is real reading to do, the illustration goes quieter */
+.page--text,
+.page--poem {
+  background-image:
+    linear-gradient(rgba(250, 242, 236, 0.87), rgba(250, 242, 236, 0.87)),
+    url("../assets/img/page-bg-web.jpg");
+}
+
+
+
+.page--text p { text-indent: 2em; }
+.page--text p + p { margin-top: 0.2em; }
+
+.page--text .page__head {
+  margin-bottom: 1.4em;
+  font-family: var(--brush);
+  font-size: 1.5em;
+  letter-spacing: 0.18em;
+  text-indent: 0;
+  color: var(--wine);
+}
+
+/* --- the poem ---------------------------------------------------------- */
+
+.page--poem {
+  justify-content: center;
+  font-family: var(--book-cn);
+  font-size: clamp(14.5px, 1.14vw, 17px);
+  line-height: 2.3;
+  color: var(--wine);
+  letter-spacing: 0.02em;
+}
+
+/* the poem still needs its title now that the title spread is gone — set a step
+   under the section head, on the same axis as the poem block */
+.poem__title {
+  font-family: var(--brush);
+  font-size: clamp(21px, 1.82vw, 27px);
+  line-height: 1.3;
+  letter-spacing: 0.16em;
+  text-indent: 0.16em;
+  text-align: center;
+  color: var(--wine);
+  margin-bottom: clamp(16px, 1.9vw, 26px);
+}
+
+/* the block is centred, the lines stay ragged-left: poetry needs both */
+.poem {
+  width: fit-content;
+  margin: 0 auto;
+  padding-bottom: 1.2em;
+}
+
+.page--poem .stanza { margin-bottom: 1.1em; }
+.page--poem .stanza:last-child { margin-bottom: 0; }
+
+.poem__source {
+  margin-top: 1.5em;
+  font-family: var(--serif);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--wine-wash);
+  text-align: right;
+  line-height: 1.9;
+}
+
+/* --- the end / next ---------------------------------------------------- */
+
+.page--next {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+/* one target: the word and the arrow are the same button, so nothing on this
+   page looks clickable but isn't. The arrow stays absolutely positioned against
+   .page--next (the button is not a containing block), which keeps the layout
+   exactly as it was. */
+.next {
+  display: block;
+  width: 100%;
+  padding: 0;
+  font-family: var(--brush);
+  font-size: clamp(58px, 7.2vw, 104px);
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-indent: 0.16em;
+  color: var(--wine);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: color 420ms var(--ease-soft), letter-spacing 420ms var(--ease-soft);
+}
+
+.next:hover,
+.next:focus-visible {
+  color: var(--wine-lift);
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+}
+
+.next__sub {
+  font-family: var(--serif);
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  color: var(--wine-wash);
+}
+
+.next__arrow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12%;
+  text-align: center;
+  font-family: var(--serif);
+  font-size: clamp(24px, 2.4vw, 34px);
+  line-height: 1;
+  color: var(--wine);
+  animation: nudge 2.6s var(--ease-soft) infinite;
+}
+
+@keyframes nudge {
+  0%, 100% { transform: translateX(0); opacity: 0.55; }
+  50%      { transform: translateX(10px); opacity: 1; }
+}
+
+/* --- blank endpapers --------------------------------------------------- */
+
+.page--blank { background: var(--page); }
+
+/* ---------------------------------------------------------------- single page */
+
+.book.is-single { --page-w: min(84vw, 420px); width: var(--page-w); }
+
+.book.is-single .book__pages { left: 0; width: var(--page-w); }
+
+.book.is-single .book__spine,
+.book.is-single .book__desk { display: none; }
+
+.book.is-single .leaf { box-shadow: none; }
+
+/* single mode: pages are stacked full width and the outgoing one turns away */
+.book.is-single .pager {
+  position: absolute;
+  inset: 0;
+  perspective: 1800px;
+  transform-style: preserve-3d;
+}
+
+.book.is-single .sheet {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: rotateY(0deg);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 620ms cubic-bezier(0.42, 0.02, 0.32, 1),
+              opacity 620ms linear;
+}
+
+.book.is-single .sheet.is-shown { opacity: 1; pointer-events: auto; }
+
+.book.is-single .sheet.is-out { transform: rotateY(-72deg); opacity: 0; }
+
+/* the single page gets its own paper edge */
+.book.is-single .page { box-shadow: 0 10px 30px -18px rgba(60, 20, 35, 0.5); }
+
+/* --------------------------------------------------------------------------
+   Narrow screens run one page at a time on a smaller sheet, so the copy has to
+   step down or the poem runs off the bottom of the paper.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 899px) {
+  .page--poem {
+    font-size: 11.8px;
+    line-height: 1.95;
+  }
+  .poem__title {
+    font-size: 18px;
+    letter-spacing: 0.14em;
+    text-indent: 0.14em;
+    margin-bottom: 12px;
+  }
+  .page--poem .stanza { margin-bottom: 0.8em; }
+  .poem { padding-bottom: 0.4em; }
+  .poem__source {
+    margin-top: 1em;
+    font-size: 9px;
+    line-height: 1.7;
+  }
+  .page--text {
+    font-size: 12.2px;
+    line-height: 2.0;
+  }
+  .page--text .page__head { font-size: 1.35em; margin-bottom: 1em; }
+  .portrait__caption { font-size: 16px; }
+  .portrait__sub { font-size: 9.5px; }
+}
+
+/* ---------------------------------------------------------------- a11y */
+
+.sr-page {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf { transition-duration: 1ms; }
+  .leaf::before { transition-duration: 1ms; }
+  .next__arrow { animation: none; }
+}

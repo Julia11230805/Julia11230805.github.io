@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>re:poem — 余秀华</title>
+  <meta name="description" content="余秀华：诗人，1976 年生于湖北钟祥横店村。诗歌《唯独我，不是》。">
+  <meta name="theme-color" content="#FBF0F0">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/book.css">
+</head>
+<body class="is-book">
+
+  <main class="book" id="book" aria-label="一本关于余秀华的小书">
+    <div class="book__desk" aria-hidden="true"></div>
+    <div class="book__pages" id="pages"></div>
+    <div class="book__spine" aria-hidden="true"></div>
+  </main>
+
+  <p class="book-hint" id="hint">点右页翻过去 · 点左页翻回来</p>
+  <p class="sr-page" id="live" aria-live="polite"></p>
+
+  <!-- ------------------------------------------------------------------
+       The pages, in reading order. js/modules/book.js binds consecutive
+       pairs into leaves (front = right-hand page, back = the left-hand
+       page of the next spread).
+       ------------------------------------------------------------------ -->
+  <div class="book-data" id="bookData" hidden>
+
+    <section class="page page--cover">
+      <img src="assets/img/cover-art-web.jpg" alt="墨线画的双眼、泪痕与花">
+      <span class="cover-mark">re:poem</span>
+    </section>
+
+    <section class="page page--portrait">
+      <figure class="portrait">
+        <img src="assets/img/yuxiuhua-web.jpg" alt="诗人余秀华"
+             onerror="this.remove();document.getElementById('portraitFallback').hidden=false;">
+        <div class="portrait__fallback" id="portraitFallback" hidden>
+          照片<br><span class="portrait__hint">assets / img / yuxiuhua.jpg</span>
+        </div>
+      </figure>
+      <p class="portrait__caption">余秀华</p>
+      <p class="portrait__sub">1976 年生于湖北钟祥 · 横店村</p>
+      <p class="page__folio">1</p>
+    </section>
+
+    <section class="page page--text">
+      <h2 class="page__head">摇摇晃晃的人间</h2>
+      <p>余秀华，1976 年生于湖北钟祥横店村，是中国当代极具生命力的诗人、作家。她因出生倒产缺氧患上脑瘫，行动、言语不便，成长于乡土，曾有一段包办婚姻，在孤独与日常里坚持写诗。</p>
+      <p>2014 年，《穿过大半个中国去睡你》爆红网络，让她走进大众视野。代表作有诗集《月光落在左手上》《摇摇晃晃的人间》《我们爱过又忘记》，散文集《无端欢喜》等。</p>
+      <p>她的文字粗粝热烈、直白坦荡，扎根土地，写欲望、孤独、爱与生命，带着原生的力量；作品被译成多国语言，纪录片《摇摇晃晃的人间》也斩获国际奖项。</p>
+      <p>她以率真勇敢的姿态挣脱命运枷锁，成为当代文坛一道独特的风景。</p>
+      <p class="page__folio">2</p>
+    </section>
+
+    <section class="page page--poem">
+      <p class="poem__title">唯独我，不是</p>
+      <div class="poem">
+      <div class="stanza">
+        <p>唯有这一种渺小能把我摧毁，唯有这样的疼</p>
+        <p>不能叫喊</p>
+      </div>
+      <div class="stanza">
+        <p>抱膝于午夜，听窗外的凋零之声：不仅仅是蔷薇的</p>
+        <p>还有夜的本身，还有整个银河系</p>
+        <p>一个宇宙</p>
+        <p>——我不知道向谁呼救</p>
+      </div>
+      <div class="stanza">
+        <p>生命的豁口：很久不至的潮汐一落千丈</p>
+      </div>
+      <div class="stanza">
+        <p>许多夜晚，我是这样过来的：把花朵撕碎</p>
+        <p>——我怀疑我的爱，每一次都让人粉身碎骨</p>
+        <p>我怀疑我先天的缺陷：这摧毁的本性</p>
+        <p>无论如何，我依旧无法和他对称</p>
+        <p>我相信他和别人的都是爱情</p>
+        <p>唯独我，不是</p>
+      </div>
+      <p class="poem__source">余秀华《唯独我，不是》<br>诗集《月光落在左手上》</p>
+      </div>
+      <p class="page__folio">3</p>
+    </section>
+
+    <section class="page page--next">
+      <button class="next" id="nextBtn" type="button">
+        next
+        <span class="next__arrow" aria-hidden="true">→</span>
+      </button>
+      <p class="page__folio">4</p>
+    </section>
+
+    <section class="page page--blank"></section>
+
+  </div>
+
+  <script src="js/app.js?v=20261120c"></script>
+  <script src="js/modules/book.js?v=20261120c"></script>
+  <script>RePoem.boot();</script>
+</body>
+</html>

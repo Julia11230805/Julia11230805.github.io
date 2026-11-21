@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>re:poem — 新生命</title>
+  <meta name="description" content="把写好的诗排成一张海报。">
+  <meta name="theme-color" content="#EFE3DA">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/design.css">
+</head>
+<body class="is-design">
+
+  <!-- 纸条的毛边：feTurbulence 推出纸边缘，文字层不受影响 -->
+  <svg class="svg-defs" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="paperEdge" x="-6%" y="-14%" width="112%" height="128%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="3" seed="11" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="3.4"
+                           xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <main class="design" id="designMain">
+    <header class="design__head">
+      <p class="design__eyebrow">
+        module 05 · 视觉设计
+        <a class="design__back" href="collage.html">← 回去改诗</a>
+      </p>
+      <h1 class="design__title">新生命</h1>
+    </header>
+
+    <div class="design__body">
+      <aside class="rail">
+        <div class="rail__group">
+          <p class="rail__label">底图</p>
+          <div class="bglist" id="bgList"></div>
+        </div>
+
+        <div class="rail__group">
+          <p class="rail__label">字体</p>
+          <div class="fontlist" id="fontList"></div>
+        </div>
+
+        <div class="rail__group">
+          <p class="rail__label">字号 <span class="rail__out" id="sizeOut">19px</span></p>
+          <input class="range" id="sizeRange" type="range" min="13" max="34" step="1" value="19"
+                 aria-label="字号">
+        </div>
+
+        <div class="rail__group">
+          <p class="rail__label">排法</p>
+          <div class="alignlist" id="alignList">
+            <button type="button" class="alignpick" data-align="left">左对齐</button>
+            <button type="button" class="alignpick" data-align="center">居中</button>
+            <button type="button" class="alignpick" data-align="free">自由摆放</button>
+          </div>
+        </div>
+
+      </aside>
+
+      <section class="stage" id="stage">
+        <div class="holder" id="holder">
+          <div class="frame" id="frame">
+            <div class="frame__lines" id="lines"></div>
+          </div>
+        </div>
+        <p class="stage__hint" id="stageHint">自由摆放可以直接拖动每一行。</p>
+      </section>
+    </div>
+  </main>
+
+  <div class="design__empty" id="designEmpty" hidden>
+    <p>还没有诗。<a href="library.html">从素材库开始</a>，一路写到这里。</p>
+    <button type="button" class="design__demo" id="demoBtn">先用一首示例试试排版</button>
+  </div>
+
+  <div class="bar">
+    <div class="bar__inner">
+      <p class="bar__hint">做好就存下来，可以下载成图片。</p>
+      <button class="bar__go" type="button" id="openSave">保存我的作品</button>
+    </div>
+  </div>
+
+  <!-- 保存 / 分享 -->
+  <div class="sheet" id="saveSheet" hidden>
+    <div class="sheet__panel">
+      <button class="sheet__close" type="button" id="closeSave" aria-label="关闭">✕</button>
+
+      <h2 class="sheet__title">你的诗，现在是一张纸了</h2>
+
+      <figure class="sheet__card" id="shareCard">
+        <img id="shareImg" alt="诗歌海报预览">
+      </figure>
+      <p class="sheet__note" id="shareNote">正在出图…</p>
+
+      <div class="sheet__actions">
+        <button type="button" class="act act--main" id="dlBtn">下载 PNG</button>
+        <button type="button" class="act" id="copyBtn">复制这首诗</button>
+        <button type="button" class="act" id="shareBtn" hidden>分享到…</button>
+        <button type="button" class="act" id="favBtn">收进作品集</button>
+        <button type="button" class="act act--full" id="restartBtn">重新创作</button>
+      </div>
+      <p class="sheet__sub">
+        图没下来？<button type="button" class="sheet__link" id="openImgBtn">在新窗口打开图片</button>，右键另存也一样。
+      </p>
+
+      <p class="sheet__label">已收藏的作品</p>
+      <div class="works" id="worksList"></div>
+    </div>
+  </div>
+
+  <script src="js/app.js?v=20261120f"></script>
+  <script src="js/data/bgs.js?v=20261120f"></script>
+  <script src="js/modules/design.js?v=20261120f"></script>
+  <script>RePoem.boot();</script>
+</body>
+</html>

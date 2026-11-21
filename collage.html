@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>re:poem — 让碎片成为诗</title>
+  <meta name="description" content="把你挑的词语碎片缝成一首原创的短诗。">
+  <meta name="theme-color" content="#EED6D8">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/make.css">
+</head>
+<body class="is-make">
+
+  <main class="make">
+    <header class="make__head">
+      <p class="make__eyebrow">module 04 · 生成　<a class="make__back" href="library.html">← 回素材库</a></p>
+      <h1 class="make__title">让碎片成为诗</h1>
+    </header>
+
+    <div class="make__empty" id="makeEmpty" hidden>
+      还没有词。<a href="library.html">回素材库挑几个</a>，再进来。
+    </div>
+
+    <div class="make__stage" id="makeStage">
+
+      <!-- 参考里那排工具在布的上面，这里也一样：先选排法、再用工具 -->
+      <aside class="rail rail--top">
+        <div class="rail__group">
+          <p class="rail__label">怎么排</p>
+          <div class="modes" id="modes">
+            <button class="mode" type="button" data-mode="free">
+              <span>自由拼贴</span><span class="mode__hint">拖着摆</span>
+            </button>
+            <button class="mode" type="button" data-mode="recombine">
+              <span>诗意重组</span><span class="mode__hint">按词的类别</span>
+            </button>
+            <button class="mode" type="button" data-mode="random">
+              <span>随机生成</span><span class="mode__hint">每次不同</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="rail__group rail__group--tools">
+          <div class="tools">
+            <button class="rail__btn" type="button" id="regen">换一版</button>
+            <button class="rail__btn" type="button" id="edit">自己改几句</button>
+            <button class="rail__btn rail__btn--save" type="button" id="save">存下这一版</button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="cloth">
+
+        <!-- 布边那条绣线：遮罩从 0 拉满，就是"一针一针缝过去" -->
+        <svg class="stitch" aria-hidden="true">
+          <defs>
+            <mask id="sewMask">
+              <!-- 遮罩里的元素没有布局盒，CSS 动画不会启动，所以这段用 SMIL 驱动，
+                   由 make.js 在每次生成时 beginElement() 重播 -->
+              <rect id="stitchMask" x="18" y="18" width="200" height="200" fill="none"
+                    stroke="#fff" stroke-width="12" pathLength="100"
+                    stroke-dasharray="100 100" stroke-dashoffset="100">
+                <animate id="sewAnim" attributeName="stroke-dashoffset" from="100" to="0"
+                         dur="1.5s" begin="indefinite" fill="freeze"/>
+              </rect>
+            </mask>
+          </defs>
+          <rect id="stitchRect" x="18" y="18" width="200" height="200" fill="none"
+                stroke="rgba(72, 104, 138, 0.62)" stroke-width="1.6"
+                stroke-dasharray="7 6" mask="url(#sewMask)"/>
+        </svg>
+
+        <!-- 缝线的那根针，沿着布的边走一圈 -->
+        <svg class="sew-needle" viewBox="0 0 10 34" fill="none" aria-hidden="true">
+          <path d="M5 0 L6.8 7 L6.8 27 L5 34 L3.2 27 L3.2 7 Z"
+                fill="#d3dae0" stroke="#8f9aa6" stroke-width="0.9"/>
+          <ellipse cx="5" cy="10" rx="0.85" ry="2.2" fill="#8f9aa6"/>
+        </svg>
+
+        <!-- 一根针，一段线，从布的右上角穿出来 -->
+        <svg class="cloth__needle" viewBox="0 0 96 210" fill="none" aria-hidden="true">
+          <path d="M60 3 L67 8 L35 112 L28 107 Z" fill="#d3dae0" stroke="#98a4b0" stroke-width="0.9"/>
+          <ellipse cx="63.5" cy="6" rx="1.4" ry="3.6" fill="#7f8b98" transform="rotate(24 63.5 6)"/>
+          <path d="M35 110 C 52 138, 12 152, 28 184 C 42 212, 88 200, 80 232"
+                stroke="#7fae7a" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+
+        <h2 class="sheet__title" id="poemTitle"></h2>
+
+        <!-- 自由拼贴：每个词是一张能拖的小纸片 -->
+        <div class="clipboard" id="clipboard" hidden>
+          <p class="clipboard__read" id="clipRead"></p>
+          <p class="clipboard__hint">
+            拖动字片摆位置 · 同一行的字会连成一行诗 · 诗题点一下就能改
+            <button class="clipboard__reset" type="button" id="clipReset">重新摊开</button>
+          </p>
+          <div class="clipboard__field" id="clipField"></div>
+        </div>
+        <div class="sheet__body" id="poemBody" spellcheck="false" role="textbox"
+             aria-multiline="true" aria-label="生成的诗歌，可以自己改"></div>
+        <p class="sheet__note" id="poemNote"></p>
+      </section>
+
+      <p class="sheet__more">下面可以换一版、自己改几句。</p>
+
+      <aside class="rail rail--foot">
+        <div>
+          <p class="rail__label">存过的</p>
+          <div class="shelf" id="shelf"></div>
+        </div>
+
+        <div>
+          <p class="rail__label">你带来的词</p>
+          <div class="wordlist" id="wordList"></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <div class="make-bar">
+    <div class="make-bar__inner">
+      <p class="make-bar__hint">不满意就再换一版，满意就往下一步走。</p>
+      <button class="make-bar__go" type="button" id="goDesign">设计我的诗歌</button>
+    </div>
+  </div>
+
+  <!-- 布的毛边：只推布面那一层，不推字 -->
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <filter id="clothEdge" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.045 0.02" numOctaves="4"
+                    seed="3" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="13"
+                         xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
+
+  <script src="js/app.js?v=20261120e"></script>
+  <script src="js/data/lexicon.js?v=20261120e"></script>
+  <script src="js/data/templates.js?v=20261120e"></script>
+  <script src="js/modules/make.js?v=20261120e"></script>
+  <script>RePoem.boot();</script>
+</body>
+</html>
