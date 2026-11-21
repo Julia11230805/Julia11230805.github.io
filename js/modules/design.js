@@ -274,12 +274,6 @@ RePoem.module('design', function () {
     paint(1400 / W).then(function (canvas) {
       state.lastCanvas = canvas;
       state.lastThumb = thumbOf(canvas);
-      if (el.share) {
-        var canShare = !!navigator.share;
-        el.share.hidden = !canShare;
-        // 没有分享按钮时不留空格子，收藏独占一行
-        el.fav.classList.toggle('act--full', !canShare);
-      }
       el.shareImg.src = canvas.toDataURL('image/png');
       el.shareNote.textContent = 'PNG · 1400 × ' + Math.round(1400 * H / W) + ' px';
       el.shareCard.classList.add('is-ready');
@@ -350,18 +344,75 @@ RePoem.module('design', function () {
     }
   }
 
-  /* 系统分享面板：手机上能用就直接把图片甩给微信/相册；
-     桌面上 Chrome 不支持 file:// 分享，按钮就不出现。 */
-  function shareIt() {
-    if (!state.lastCanvas || !navigator.share) return;
-    state.lastCanvas.toBlob(function (blob) {
-      if (!blob) return;
-      var file = new File([blob], (state.title || 're-poem') + '.png', { type: 'image/png' });
-      var payload = { title: state.title, text: state.title + '\n\n' + state.lines.join('\n'), files: [file] };
-      if (navigator.canShare && !navigator.canShare({ files: [file] })) {
-        delete payload.files;
+  /* 分享：三级降级，永远有一个能用的
+     ① 手机 / 支持文件分享的浏览器 → 系统分享面板，图片直接进微信、相册
+     ② 桌面 Chrome / Edge / Safari → 把图片写进剪贴板，去微信里直接粘
+     ③ 都不行（file:// 之类） → 复制「标题 + 地址」，链接也能发                 */
+  var PUBLIC_SITE = 'https://julia11230805.github.io/';
+
+  function shareSiteUrl() {
+    return location.origin.indexOf('github.io') >= 0 ? location.origin + '/' : PUBLIC_SITE;
+  }
+
+  function shareIt(e) {
+    if (!state.lastCanvas) return;
+    var btn = e && e.currentTarget;
+    var name = (state.title || 're-poem') + '.png';
+
+    function say(msg) {
+      if (!btn) return;
+      var old = btn.getAttribute('data-label') || btn.textContent;
+      btn.setAttribute('data-label', old);
+      btn.textContent = msg;
+      setTimeout(function () { btn.textContent = btn.getAttribute('data-label'); }, 1800);
+    }
+
+    function copyLink() {
+      var txt = (state.title ? state.title + '\n\n' : '') + state.lines.join('\n') +
+                '\n\n' + shareSiteUrl();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function () { say('链接已复制'); },
+                                                function () { legacyCopy(txt); say('链接已复制'); });
+      } else {
+        legacyCopy(txt);
+        say('链接已复制');
       }
-      navigator.share(payload).catch(function () {});
+    }
+
+    function legacyCopy(txt) {
+      var ta = document.createElement('textarea');
+      ta.value = txt;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (err) {}
+      document.body.removeChild(ta);
+    }
+
+    state.lastCanvas.toBlob(function (blob) {
+      if (!blob) { copyLink(); return; }
+
+      var file = null;
+      try { file = new File([blob], name, { type: 'image/png' }); } catch (err) {}
+
+      // ① 系统分享
+      if (file && navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+        navigator.share({
+          files: [file],
+          title: state.title,
+          text: state.title + ' · re:poem'
+        }).then(function () { say('已分享'); }, function () { say('已取消'); });
+        return;
+      }
+
+      // ② 图片进剪贴板
+      if (navigator.clipboard && window.ClipboardItem) {
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+          .then(function () { say('图片已复制'); }, copyLink);
+        return;
+      }
+
+      // ③ 退到链接
+      copyLink();
     }, 'image/png');
   }
 
