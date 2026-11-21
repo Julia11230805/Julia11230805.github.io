@@ -274,7 +274,12 @@ RePoem.module('design', function () {
     paint(1400 / W).then(function (canvas) {
       state.lastCanvas = canvas;
       state.lastThumb = thumbOf(canvas);
-      if (el.share) el.share.hidden = !navigator.share;
+      if (el.share) {
+        var canShare = !!navigator.share;
+        el.share.hidden = !canShare;
+        // 没有分享按钮时不留空格子，收藏独占一行
+        el.fav.classList.toggle('act--full', !canShare);
+      }
       el.shareImg.src = canvas.toDataURL('image/png');
       el.shareNote.textContent = 'PNG · 1400 × ' + Math.round(1400 * H / W) + ' px';
       el.shareCard.classList.add('is-ready');

@@ -5,6 +5,24 @@
 
 ---
 
+## 线上地址
+
+**https://julia11230805.github.io/**
+
+GitHub Pages，仓库 `Julia11230805/Julia11230805.github.io`（main 分支根目录）。
+手机、电脑、任何地方都能开，不需要开代理（实测国内直连 200）。
+
+改完东西要更新线上：告诉我，我 `git commit` + `git push`，Pages 一两分钟自己重建。
+`github.com` 直连不通，推代码要挂 Clash；`api.github.com` 反而直连更稳。
+
+部署踩到的两个坑：
+1. **GitHub Pages 区分大小写，Windows 不区分。** 本地 `Yuxiuhua.jpg` 能显示，
+   线上就 404。部署后必须按"引用路径 → 线上 HEAD 200"逐个核一遍，
+   再比对仓库文件树与本地文件树（这次 48 个文件一一对上，无大小写差异）。
+2. **国内访问 GitHub 的几条域名行为不一样**：`github.com` 直连 000、代理 200；
+   `api.github.com` 直连 200、代理 403；`*.github.io` 两边都 200。
+   所以拉/推代码走代理，调 API 走直连。
+
 ## 运行（推荐：本地服务器）
 
 双击桌面上的 **`re-poem 网站.bat`** ——它会用系统 Python 起一个本地服务器、
