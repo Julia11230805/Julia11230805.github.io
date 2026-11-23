@@ -112,9 +112,9 @@ RePoem.module('make', function () {
     var fail = false;
     var forced = false;
 
-    out = out.replace(/\{(n2?|p|t|e|a)\}/g, function (_, kind, offset) {
+    out = out.replace(/\{(n[23]?|p|t|e|a)\}/g, function (_, kind, offset) {
       if (fail) return '';
-      var base = kind === 'n2' ? 'n' : kind;
+      var base = kind.indexOf('n') === 0 ? 'n' : kind;
       var words = bucket(base);
       if (!words || !words.length) { fail = true; return ''; }
 
@@ -204,8 +204,9 @@ RePoem.module('make', function () {
   }
 
   function frameKinds(tpl) {
-    return (tpl.match(/\{(n2?|p|t|e|a)\}/g) || []).map(function (m) {
-      return m.slice(1, -1).replace('2', '');
+    return (tpl.match(/\{(n[23]?|p|t|e|a)\}/g) || []).map(function (m) {
+      var k = m.slice(1, -1);
+      return k.indexOf('n') === 0 ? 'n' : k;
     });
   }
 
@@ -221,95 +222,156 @@ RePoem.module('make', function () {
     return frameKinds(tpl).every(function (k) { return bucket(k) && bucket(k).length; });
   }
 
-  /* 诗意重组：按类别出句，情绪与物象交替 */
-  function buildRecombine(words, rnd) {
-    var target = Math.max(8, Math.min(14, Math.round(words.length * 1.4)));
+
+  /* ------------------------------------------------------------ 组一首诗
+     旧版是"随机抽句型 → 填空"，抽到什么算什么，所以读起来是同一句话换了词。
+     现在先排一个结构（起 → 承 → 排比 → 转 → 问 → 合），再按位置挑骨架，
+     并且允许挑一个"回环词"在诗里重复出现 —— 余秀华常拿一个词反复敲
+     （一次次、越来越、同一个地名），这是风格，不是 bug。          */
+
+  function pickEcho(pool, rnd) {
+    var bag = pool.n.concat(pool.e);
+    return bag.length ? pick(bag, rnd) : null;
+  }
+
+  function planRoles(rnd, target, pool) {
+    var plan = ['open'];
+    if (rnd() < 0.5) plan.push('open');
+    var devCount = Math.max(2, Math.min(5, target - 5));
+    for (var i = 0; i < devCount; i++) plan.push('dev');
+    if (pool.n.length >= 3 && rnd() < 0.75) plan.push('chant');
+    plan.push('turn');
+    if (rnd() < 0.45) plan.push('turn');
+    if (rnd() < 0.4) plan.push('ask');
+    plan.push('close');
+    return plan;
+  }
+
+  function framesFor(role, usage) {
+    var recent = state.recentFrames || [];
+    var pool = T.FRAMES.filter(function (f) {
+      if (f.r !== role) return false;
+      if (usage[f.s]) return false;
+      return frameKinds(f.s).every(function (k) {
+        return bucket(k) && bucket(k).length;
+      }) && frameUsable(f.s, {});
+    });
+    // 上一首用过的骨架先让开；让不开（剩太少）才允许复用
+    var fresh = pool.filter(function (f) { return recent.indexOf(f.s) === -1; });
+    return fresh.length >= 3 ? fresh : pool;
+  }
+
+  /* 允许 echo 词重复；其余词全诗不重复 */
+  function fillWithEcho(tpl, rnd, used, echo, counter) {
+    var inLine = [];
+    var ok = true;
+    counter = counter || { echo: 0 };
+    var out = tpl.replace(/\{(n[23]?|p|t|e|a)\}/g, function (_, kind, offset) {
+      if (!ok) return '';
+      var base = kind.indexOf('n') === 0 ? 'n' : kind;
+      var words = bucket(base);
+      if (!words || !words.length) { ok = false; return ''; }
+
+      if (base === 'a') {
+        var before = tpl.slice(Math.max(0, offset - 3), offset);
+        if (/(我在|都在|一直在|我就|边上|也)$/.test(before)) {
+          var intr = words.filter(function (w) { return T.INTRANS[w]; });
+          if (intr.length) words = intr;
+        }
+      }
+
+      var opts = words.filter(function (w) {
+        if (inLine.indexOf(w) !== -1) return false;
+        if (used.indexOf(w) !== -1 && w !== echo) return false;
+        // 回环词也有限度：全诗三次封顶，再多就成了复读
+        if (w === echo && counter.echo >= 2) return false;
+        return true;
+      });
+      if (!opts.length) {
+        opts = words.filter(function (w) { return inLine.indexOf(w) === -1; });
+      }
+      if (!opts.length) { ok = false; return ''; }
+
+      var w = pick(opts, rnd);
+      inLine.push(w);
+      if (used.indexOf(w) === -1) used.push(w);
+      if (w === echo) counter.echo++;
+      return w;
+    });
+    return ok ? out : null;
+  }
+
+  function compose(words, rnd, opts) {
+    opts = opts || {};
+    var target = Math.max(8, Math.min(16, Math.round(words.length * (opts.density || 1.5))));
+    var roles = planRoles(rnd, target, state.pool);
     var lines = [];
-    var recent = [];
     var used = [];
     var usage = {};
-    var kindsOrder = ['n', 'e', 'n', 'a', 'n', 'e', 'a', 'n'];
-    var guard = 0;
+    var echo = opts.echo === false ? null : pickEcho(state.pool, rnd);
+    var counter = { echo: 0 };
 
-    while (lines.length < target && guard < target * 14) {
-      guard++;
-      var want = kindsOrder[lines.length % kindsOrder.length];
-      var tpl = null;
+    var meRun = 0;   // 连着几句是"我"开头
 
-      // 先挑能塞进想要的词性的句型
-      var candidates = T.FRAMES.filter(function (f) {
-        if (recent.indexOf(f.s) !== -1) return false;
-        if (f.s.indexOf('{' + want + '}') === -1) return false;
-        return frameUsable(f.s, usage);
-      });
-      if (candidates.length) tpl = pick(candidates, rnd).s;
-      else {
-        var fallback = T.FRAMES.filter(function (f) {
-          return recent.indexOf(f.s) === -1 && frameUsable(f.s, usage);
-        });
-        tpl = fallback.length ? pick(fallback, rnd).s : null;
+    roles.forEach(function (role) {
+      if (lines.length >= target) return;
+      var pool = framesFor(role, usage);
+      if (!pool.length) {
+        // 这一档骨架用完了，退到通用的"承"句
+        pool = framesFor('dev', usage);
       }
-      if (!tpl) break;
+      if (!pool.length) return;
 
-      var line = fillTemplate(tpl, rnd, used);
-      if (!line) { recent.push(tpl); continue; }
+      // 已经连着两句"我"开头，这一句挑个不以我起头的骨架
+      if (meRun >= 2) {
+        var noMe = pool.filter(function (x) { return x.s.indexOf('我') === -1; });
+        if (noMe.length) pool = noMe;
+      }
+
+      var f = pick(pool, rnd);
+      var line = fillWithEcho(f.s, rnd, used, echo, counter);
+      if (!line) return;
+      usage[f.s] = 1;
       lines.push(line);
-      usage[tpl] = (usage[tpl] || 0) + 1;
-      recent.push(tpl);
-      if (recent.length > 6) recent.shift();
-      if (used.length > 8) used.shift();
-    }
+      meRun = line.indexOf('我') === 0 ? meRun + 1 : 0;
+    });
 
-    // 兜底：没被用到的词，找一个能装它的句型塞进去；实在没有就单独成行
+    /* 选中的词尽量都用上：没进诗的，塞进一句能装下它的"承"句 */
     var missing = words.filter(function (w) {
       return !lines.some(function (l) { return l.indexOf(w) !== -1; });
     });
     missing.forEach(function (w) {
       var k = kindOf(w);
       var host = T.FRAMES.filter(function (f) {
-        return frameUsable(f.s, usage) && frameKinds(f.s).indexOf(k) !== -1;
+        return !usage[f.s] && f.r === 'dev' &&
+               frameKinds(f.s).indexOf(k) !== -1 && frameUsable(f.s, {});
       })[0];
-      var made = host ? fillTemplate(host.s, rnd, used, [], w) : null;
-      if (made) {
-        usage[host.s] = (usage[host.s] || 0) + 1;
-        lines.splice(Math.min(lines.length, 2 + Math.floor(rnd() * lines.length)), 0, made);
-      } else {
-        lines.push(w);
+      var made = host ? fillWithEcho(host.s, rnd, used, w, counter) : null;
+      // 补的句子插在收尾句之前，别把短促的结尾挤掉
+      var at = Math.max(1, Math.min(lines.length - 1, 2 + Math.floor(rnd() * 4)));
+      if (made && made.indexOf(w) !== -1) {
+        usage[host.s] = 1;
+        lines.splice(at, 0, made);
+      } else if (k === 'n' || k === 't' || k === 'p') {
+        // 实在塞不进去，让它单独成一行 —— 短行本来也是她的写法，但不要落在最后
+        lines.splice(Math.max(1, lines.length - 1), 0, w);
       }
     });
 
+    state.recentFrames = Object.keys(usage).slice(-12);
     return lines;
+  }
+
+  /* 诗意重组：按类别出句，情绪与物象交替 */
+  function buildRecombine(words, rnd) {
+    return compose(words, rnd, { density: 1.5 });
   }
 
   /* 随机生成：洗牌 → 随机句型 → 随机分行 */
   function buildRandom(words, rnd) {
+    // 随机生成：词先洗牌，诗更松、更跳，回环词只在一半情况下出现
     var bag = shuffle(words, rnd);
-    var idx = 0;
-    var lines = [];
-    var recent = [];
-    var used = [];
-
-    while (idx < bag.length || lines.length < 6) {
-      var tpl = pickFrame(rnd, null, recent);
-      var slots = (tpl.match(/\{(n2?|p|t|e|a)\}/g) || []).length;
-
-      // 句型需要几个词，从洗好的包里切片；包空了就只补虚词式短句
-      if (idx >= bag.length) {
-        if (lines.length >= 6) break;
-        tpl = pick(['{e}，还是{e}', '{n}，还是{n2}'], rnd);
-        slots = 2;
-        if (!state.pool.n.length) break;
-      }
-
-      var line = fillTemplate(tpl, rnd, used);
-      if (!line) { recent.push(tpl); continue; }
-      lines.push(line);
-      recent.push(tpl);
-      if (recent.length > 6) recent.shift();
-      idx += Math.max(1, Math.floor(slots / 2));
-    }
-
-    return lines;
+    return compose(bag, rnd, { density: 1.8, echo: rnd() < 0.5 });
   }
 
   /* ------------------------------------------------------- 自由拼贴：拖字 */
@@ -539,15 +601,25 @@ RePoem.module('make', function () {
 
   /* ------------------------------------------------------------ stanzas */
 
+  /* 收尾的短句（几个字 + 句号/问号）自己站一段 —— 她常这么落笔 */
+  function isSting(line) {
+    var bare = line.replace(/[^\u4e00-\u9fa5]/g, '');
+    return /[。？！]$/.test(line) && bare.length <= 9;
+  }
+
   function toStanzas(lines, rnd) {
     var out = [];
-    var cur = [];
     var i = 0;
     while (i < lines.length) {
+      if (isSting(lines[i])) { out.push([lines[i]]); i++; continue; }
       var take = rnd() < 0.28 ? 1 : (rnd() < 0.72 ? 2 : 3);
-      cur = lines.slice(i, i + take);
-      i += take;
-      if (cur.length) out.push(cur);
+      var chunk = lines.slice(i, i + take);
+      // 别把短句夹在段落中间
+      for (var k = 1; k < chunk.length; k++) {
+        if (isSting(chunk[k])) { chunk = chunk.slice(0, k); break; }
+      }
+      i += chunk.length;
+      if (chunk.length) out.push(chunk);
     }
     return out;
   }
